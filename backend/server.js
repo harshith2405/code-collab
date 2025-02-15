@@ -66,25 +66,35 @@ io.on("connection", (socket) => {
       let room = await Room.findOne({ roomId });
       
       if (room) {
-        // Add user to room
-        room.users.push({ socketId: socket.id, username });
+        // Add user to room's activeUsers array
+        room.activeUsers.push({ socketId: socket.id, username });
         await room.save();
         
-        socket.emit("load-code", room.code);
+        // Send existing editors to the new user
+        socket.emit("load-editors", room.editors);
         socket.emit("load-messages", room.messages);
       } else {
+        // Create new room with initial editor
         room = new Room({ 
-          roomId, 
-          code: "// Start coding...",
-          users: [{ socketId: socket.id, username }],
+          roomId,
+          editors: [{ 
+            id: 'main',
+            name: 'Main Editor',
+            language: 'javascript',
+            code: "// Start coding..."
+          }],
+          activeUsers: [{ socketId: socket.id, username }],
           messages: []
         });
         await room.save();
-        socket.emit("load-code", room.code);
+        socket.emit("load-editors", room.editors);
       }
 
       // Broadcast updated user list to all clients in the room
-      const users = room.users.map(u => ({ socketId: u.socketId, username: u.username }));
+      const users = room.activeUsers.map(u => ({ 
+        socketId: u.socketId, 
+        username: u.username 
+      }));
       io.to(roomId).emit("update-users", users);
       
       // Notify others that a new user joined
@@ -104,6 +114,7 @@ io.on("connection", (socket) => {
         { $push: { messages: newMessage } }
       );
 
+      // Only emit the new message, don't update users
       io.to(roomId).emit("new-message", newMessage);
     } catch (error) {
       console.error("Error sending message:", error);
@@ -113,16 +124,18 @@ io.on("connection", (socket) => {
 
   socket.on("disconnect", async () => {
     try {
-      // Find all rooms where this socket was a user
-      const rooms = await Room.find({ "users.socketId": socket.id });
+      const rooms = await Room.find({ "activeUsers.socketId": socket.id });
       
       for (const room of rooms) {
-        // Remove user from room
-        room.users = room.users.filter(u => u.socketId !== socket.id);
+        // Remove user from room's activeUsers
+        room.activeUsers = room.activeUsers.filter(u => u.socketId !== socket.id);
         await room.save();
         
         // Broadcast updated user list
-        const users = room.users.map(u => ({ socketId: u.socketId, username: u.username }));
+        const users = room.activeUsers.map(u => ({ 
+          socketId: u.socketId, 
+          username: u.username 
+        }));
         io.to(room.roomId).emit("update-users", users);
         io.to(room.roomId).emit("user-left", socket.id);
       }
@@ -131,23 +144,62 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("code-change", async ({ roomId, code }) => {
+  socket.on("code-change", async ({ roomId, editorId, code }) => {
     try {
-      // Broadcast code changes to other users in the room
-      socket.to(roomId).emit("code-update", code);
-
-      // Save the latest code to MongoDB with timestamp
+      // Update only the specific editor's code
       await Room.findOneAndUpdate(
-        { roomId },
+        { roomId, "editors.id": editorId },
         { 
-          code,
-          lastUpdated: new Date(),
-        },
-        { upsert: true }
+          $set: { 
+            "editors.$.code": code,
+            lastUpdated: new Date()
+          }
+        }
       );
+      // Broadcast code update with editorId
+      socket.to(roomId).emit("code-update", { editorId, code });
     } catch (error) {
       console.error("Error in code-change:", error);
       socket.emit("error", "Failed to save code");
+    }
+  });
+
+  socket.on("add-editor", async ({ roomId, editor }) => {
+    try {
+      await Room.findOneAndUpdate(
+        { roomId },
+        { $push: { editors: editor } }
+      );
+      socket.to(roomId).emit("editor-added", editor);
+    } catch (error) {
+      console.error("Error adding editor:", error);
+      socket.emit("error", "Failed to add editor");
+    }
+  });
+
+  socket.on("remove-editor", async ({ roomId, editorId }) => {
+    try {
+      await Room.findOneAndUpdate(
+        { roomId },
+        { $pull: { editors: { id: editorId } } }
+      );
+      socket.to(roomId).emit("editor-removed", editorId);
+    } catch (error) {
+      console.error("Error removing editor:", error);
+      socket.emit("error", "Failed to remove editor");
+    }
+  });
+
+  socket.on("rename-editor", async ({ roomId, editorId, name }) => {
+    try {
+      await Room.findOneAndUpdate(
+        { roomId, "editors.id": editorId },
+        { $set: { "editors.$.name": name } }
+      );
+      socket.to(roomId).emit("editor-renamed", { editorId, name });
+    } catch (error) {
+      console.error("Error renaming editor:", error);
+      socket.emit("error", "Failed to rename editor");
     }
   });
 });

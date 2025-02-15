@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import Editor from "@monaco-editor/react";
 import io from "socket.io-client";
 import { v4 as uuidv4 } from "uuid";
+import { Plus, X, Sun, Moon, Copy, Check } from 'react-feather';
 import './App.css';
 
 function App() {
@@ -16,6 +17,20 @@ function App() {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const chatContainerRef = useRef(null);
+  const [editors, setEditors] = useState([
+    { 
+      id: 'main', 
+      name: 'Main Editor', 
+      language: 'javascript', 
+      code: '// Start coding...' 
+    }
+  ]);
+  const [activeEditor, setActiveEditor] = useState('main');
+  const [newEditorName, setNewEditorName] = useState('');
+  const [showNewEditorModal, setShowNewEditorModal] = useState(false);
+  const [editingName, setEditingName] = useState(null);
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [copySuccess, setCopySuccess] = useState(false);
 
   useEffect(() => {
     if (chatContainerRef.current) {
@@ -69,12 +84,60 @@ function App() {
     });
 
     socket.on("disconnect", () => setStatus("disconnected"));
-    socket.on("error", setError);
-    socket.on("load-code", setCode);
-    socket.on("code-update", setCode);
-    socket.on("update-users", setUsers);
-    socket.on("load-messages", setMessages);
-    socket.on("new-message", (msg) => setMessages(prev => [...prev, msg]));
+    socket.on("error", (err) => {
+      console.error("Socket error:", err);
+      setError(err);
+    });
+    
+    socket.on("load-editors", (loadedEditors) => {
+      console.log("Received editors:", loadedEditors);
+      if (Array.isArray(loadedEditors) && loadedEditors.length > 0) {
+        setEditors(loadedEditors);
+        setActiveEditor(loadedEditors[0].id);
+      }
+    });
+
+    socket.on("editor-added", (newEditor) => {
+      setEditors(prev => [...prev, newEditor]);
+    });
+
+    socket.on("editor-removed", (editorId) => {
+      setEditors(prev => {
+        const filtered = prev.filter(editor => editor.id !== editorId);
+        if (activeEditor === editorId && filtered.length > 0) {
+          setActiveEditor(filtered[0].id);
+        }
+        return filtered;
+      });
+    });
+
+    socket.on("code-update", ({ editorId, code }) => {
+      setEditors(prev => prev.map(editor => 
+        editor.id === editorId ? { ...editor, code } : editor
+      ));
+    });
+
+    socket.on("update-users", (updatedUsers) => {
+      if (Array.isArray(updatedUsers)) {
+        setUsers(updatedUsers);
+      }
+    });
+
+    socket.on("load-messages", (loadedMessages) => {
+      if (Array.isArray(loadedMessages)) {
+        setMessages(loadedMessages);
+      }
+    });
+
+    socket.on("new-message", (msg) => {
+      setMessages(prev => [...prev, msg]);
+    });
+
+    socket.on("editor-renamed", ({ editorId, name }) => {
+      setEditors(prev => prev.map(editor => 
+        editor.id === editorId ? { ...editor, name } : editor
+      ));
+    });
 
     socket.emit("join-room", { roomId, username });
 
@@ -82,11 +145,14 @@ function App() {
       socket.off("connect");
       socket.off("disconnect");
       socket.off("error");
-      socket.off("load-code");
+      socket.off("load-editors");
+      socket.off("editor-added");
+      socket.off("editor-removed");
       socket.off("code-update");
       socket.off("update-users");
       socket.off("load-messages");
       socket.off("new-message");
+      socket.off("editor-renamed");
     };
   }, [socket, isJoined, roomId, username]);
 
@@ -110,6 +176,76 @@ function App() {
     }
   };
 
+  const handleCodeChange = (newCode, editorId) => {
+    setEditors(prev => prev.map(editor => 
+      editor.id === editorId ? { ...editor, code: newCode } : editor
+    ));
+    
+    if (socket?.connected) {
+      socket.emit("code-change", { roomId, editorId, code: newCode });
+    }
+  };
+
+  const handleAddEditor = (e) => {
+    e.preventDefault();
+    if (newEditorName.trim()) {
+      const newEditor = {
+        id: uuidv4(),
+        name: newEditorName.trim(),
+        language: 'javascript',
+        code: '// Start coding...'
+      };
+      
+      setEditors(prev => [...prev, newEditor]);
+      setActiveEditor(newEditor.id);
+      setNewEditorName('');
+      setShowNewEditorModal(false);
+      
+      if (socket?.connected) {
+        socket.emit("add-editor", { roomId, editor: newEditor });
+      }
+    }
+  };
+
+  const handleRemoveEditor = (editorId) => {
+    if (editors.length > 1) {
+      setEditors(prev => prev.filter(editor => editor.id !== editorId));
+      if (activeEditor === editorId) {
+        setActiveEditor(editors[0].id);
+      }
+      
+      if (socket?.connected) {
+        socket.emit("remove-editor", { roomId, editorId });
+      }
+    }
+  };
+
+  const handleRenameEditor = (editorId, newName) => {
+    if (newName.trim()) {
+      setEditors(prev => prev.map(editor => 
+        editor.id === editorId ? { ...editor, name: newName.trim() } : editor
+      ));
+      setEditingName(null);
+      
+      if (socket?.connected) {
+        socket.emit("rename-editor", { roomId, editorId, name: newName.trim() });
+      }
+    }
+  };
+
+  const toggleTheme = () => {
+    setIsDarkMode(!isDarkMode);
+    document.body.classList.toggle('dark-mode');
+  };
+
+  const handleCopyLink = () => {
+    const link = `${window.location.origin}/${roomId}`;
+    navigator.clipboard.writeText(link).then(() => {
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    });
+  };
+
   if (!isJoined) {
     return (
       <div className="username-prompt">
@@ -129,40 +265,117 @@ function App() {
   }
 
   return (
-    <div className="container">
-      <h1>Code Collaboration Hub</h1>
+    <div className={`container ${isDarkMode ? 'dark-mode' : ''}`}>
+      <div className="header">
+        <h1>Code Collaboration Hub</h1>
+        <button 
+          className="theme-toggle-btn"
+          onClick={toggleTheme}
+          title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+        >
+          {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+        </button>
+      </div>
+      
       <div className="status-bar">
         <p>Room ID: {roomId}</p>
         <p>Status: {status}</p>
         {error && <p className="error">Error: {error}</p>}
       </div>
-      <p>Share this link: {window.location.origin}/{roomId}</p>
-      
+
+      <div className="share-link-bar">
+        <p>Share this link: {window.location.origin}/{roomId}</p>
+        <button 
+          className={`copy-link-btn ${copySuccess ? 'success' : ''}`}
+          onClick={handleCopyLink}
+          title="Copy link to clipboard"
+        >
+          {copySuccess ? <Check size={16} /> : <Copy size={16} />}
+        </button>
+      </div>
+
+      <button 
+        className="new-editor-btn"
+        onClick={() => setShowNewEditorModal(true)}
+      >
+        <Plus size={16} /> New Editor
+      </button>
+
       <div className="main-content">
-        <div className="editor-container">
-          <Editor
-            height="70vh"
-            defaultLanguage="javascript"
-            value={code}
-            onChange={(newCode) => {
-              setCode(newCode);
-              if (socket?.connected) {
-                socket.emit("code-change", { roomId, code: newCode });
-              }
-            }}
-            options={{
-              minimap: { enabled: false },
-              fontSize: 14,
-              wordWrap: "on",
-              lineNumbers: "on",
-              roundedSelection: false,
-              scrollBeyondLastLine: false,
-              automaticLayout: true
-            }}
-          />
+        <div className="editors-sidebar">
+          <h3>Editors</h3>
+          <div className="editors-list">
+            {editors.map(editor => (
+              <div 
+                key={editor.id}
+                className={`editor-item ${activeEditor === editor.id ? 'active' : ''}`}
+              >
+                {editingName === editor.id ? (
+                  <form 
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      handleRenameEditor(editor.id, e.target.elements.name.value);
+                    }}
+                    className="rename-form"
+                  >
+                    <input
+                      name="name"
+                      defaultValue={editor.name}
+                      autoFocus
+                      onBlur={(e) => handleRenameEditor(editor.id, e.target.value)}
+                    />
+                  </form>
+                ) : (
+                  <div className="editor-item-content">
+                    <span 
+                      className="editor-name"
+                      onClick={() => setActiveEditor(editor.id)}
+                      onDoubleClick={() => setEditingName(editor.id)}
+                    >
+                      {editor.name}
+                    </span>
+                    {editors.length > 1 && (
+                      <X 
+                        size={14}
+                        onClick={() => handleRemoveEditor(editor.id)}
+                        className="remove-editor"
+                      />
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
 
-        <div className="sidebar">
+        <div className="workspace">
+          <div className="editor-container">
+            {editors.map(editor => (
+              <div 
+                key={editor.id}
+                style={{ display: activeEditor === editor.id ? 'block' : 'none' }}
+              >
+                <Editor
+                  height="70vh"
+                  defaultLanguage={editor.language}
+                  value={editor.code}
+                  onChange={(newCode) => handleCodeChange(newCode, editor.id)}
+                  options={{
+                    minimap: { enabled: false },
+                    fontSize: 14,
+                    wordWrap: "on",
+                    lineNumbers: "on",
+                    roundedSelection: false,
+                    scrollBeyondLastLine: false,
+                    automaticLayout: true
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="chat-sidebar">
           <div className="active-users">
             <h3>Active Users</h3>
             <ul>
@@ -198,6 +411,29 @@ function App() {
           </div>
         </div>
       </div>
+
+      {showNewEditorModal && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <h3>Add New Editor</h3>
+            <form onSubmit={handleAddEditor}>
+              <input
+                type="text"
+                value={newEditorName}
+                onChange={(e) => setNewEditorName(e.target.value)}
+                placeholder="Editor Name"
+                required
+              />
+              <div className="modal-buttons">
+                <button type="submit">Add</button>
+                <button type="button" onClick={() => setShowNewEditorModal(false)}>
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

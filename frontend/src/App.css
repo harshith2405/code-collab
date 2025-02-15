@@ -67,7 +67,8 @@ p {
 }
 
 .main-content {
-  display: flex;
+  display: grid;
+  grid-template-columns: 200px 1fr 300px;
   gap: 20px;
   height: 70vh;
 }
@@ -78,10 +79,7 @@ p {
 }
 
 .sidebar {
-  width: 300px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+  width: auto;
 }
 
 .active-users {
@@ -203,4 +201,540 @@ p {
 
 .username-prompt button:hover {
   background: #0056b3;
+}
+
+.editor-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.editor-tabs {
+  display: flex;
+  gap: 2px;
+  background: #e0e0e0;
+  padding: 5px 5px 0;
+  border-radius: 4px 4px 0 0;
+  overflow-x: auto;
+}
+
+.editor-tab {
+  padding: 8px 16px;
+  background: #f0f0f0;
+  border-radius: 4px 4px 0 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  user-select: none;
+}
+
+.editor-tab.active {
+  background: white;
+}
+
+.remove-tab {
+  opacity: 0.5;
+  cursor: pointer;
+}
+
+.remove-tab:hover {
+  opacity: 1;
+}
+
+.add-editor-btn {
+  padding: 8px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  opacity: 0.5;
+}
+
+.add-editor-btn:hover {
+  opacity: 1;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  width: 300px;
+}
+
+.modal h3 {
+  margin-top: 0;
+}
+
+.modal input {
+  width: 100%;
+  padding: 8px;
+  margin: 10px 0;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.modal-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.modal button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.modal button[type="submit"] {
+  background: #007bff;
+  color: white;
+}
+
+.modal button[type="button"] {
+  background: #f0f0f0;
+}
+
+.new-editor-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  margin: 10px 0;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.new-editor-btn:hover {
+  background: #0056b3;
+}
+
+.editors-sidebar {
+  background: #f5f5f5;
+  border-radius: 4px;
+  padding: 15px;
+  overflow-y: auto;
+}
+
+.editors-sidebar h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-size: 16px;
+}
+
+.editors-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.editor-item {
+  padding: 8px;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.editor-item:hover {
+  background: #e9ecef;
+}
+
+.editor-item.active {
+  background: #e3f2fd;
+  border-left: 3px solid #007bff;
+}
+
+.editor-item-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.editor-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.remove-editor {
+  opacity: 0.5;
+  cursor: pointer;
+}
+
+.remove-editor:hover {
+  opacity: 1;
+  color: #dc3545;
+}
+
+.rename-form {
+  margin: 0;
+  padding: 0;
+}
+
+.rename-form input {
+  width: 100%;
+  padding: 4px 8px;
+  border: 1px solid #007bff;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.workspace {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.chat-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Add theme variables */
+:root {
+  --bg-color: #ffffff;
+  --text-color: #2f3337;
+  --editor-bg: #ffffff;
+  --sidebar-bg: #f8f9fa;
+  --border-color: #e4e6e8;
+  --hover-color: #f1f1f1;
+  --active-color: #e3f2fd;
+  --button-bg: #2f8d46;
+  --button-hover: #256e37;
+  --header-bg: #ffffff;
+  --modal-bg: #ffffff;
+  --success-color: #28a745;
+}
+
+/* Dark theme variables */
+.dark-mode {
+  --bg-color: #1a1a1a;
+  --text-color: #ffffff;
+  --editor-bg: #2d2d2d;
+  --sidebar-bg: #2d2d2d;
+  --border-color: #3d3d3d;
+  --hover-color: #3d3d3d;
+  --active-color: #308d46;
+  --button-bg: #308d46;
+  --button-hover: #256e37;
+  --header-bg: #2d2d2d;
+  --modal-bg: #2d2d2d;
+  --success-color: #2f8d46;
+}
+
+/* Apply theme colors */
+body {
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  transition: all 0.3s ease;
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+}
+
+.container {
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* Header styles */
+.header {
+  background-color: var(--header-bg);
+  padding: 15px 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin: -20px -20px 20px -20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 24px;
+  color: var(--text-color);
+}
+
+/* Theme toggle button */
+.theme-toggle-btn {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.theme-toggle-btn:hover {
+  background-color: var(--hover-color);
+  transform: scale(1.1);
+}
+
+/* Status bar */
+.status-bar {
+  background: var(--sidebar-bg);
+  padding: 12px 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Share link bar */
+.share-link-bar {
+  background: var(--sidebar-bg);
+  padding: 12px 20px;
+  border-radius: 8px;
+  margin: 20px 0;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.copy-link-btn {
+  background: var(--button-bg);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.copy-link-btn:hover {
+  background: var(--button-hover);
+  transform: translateY(-1px);
+}
+
+.copy-link-btn.success {
+  background: var(--success-color);
+}
+
+/* Main content layout */
+.main-content {
+  display: grid;
+  grid-template-columns: 250px 1fr 300px;
+  gap: 20px;
+  height: calc(100vh - 200px);
+  margin-top: 20px;
+}
+
+/* Editors sidebar */
+.editors-sidebar {
+  background: var(--sidebar-bg);
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.editors-list {
+  margin-top: 15px;
+}
+
+.editor-item {
+  padding: 10px 15px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  border: 1px solid var(--border-color);
+  transition: all 0.2s ease;
+}
+
+.editor-item:hover {
+  transform: translateX(2px);
+}
+
+.editor-item.active {
+  background: var(--active-color);
+  border-left: 3px solid var(--button-bg);
+}
+
+/* Editor workspace */
+.workspace {
+  background: var(--editor-bg);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Chat sidebar */
+.chat-sidebar {
+  background: var(--sidebar-bg);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.active-users {
+  padding: 15px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  height: calc(100% - 150px);
+}
+
+.chat-messages {
+  flex: 1;
+  padding: 15px;
+  overflow-y: auto;
+}
+
+.message {
+  padding: 10px 15px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  background: var(--editor-bg);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.own-message {
+  background: var(--active-color);
+  margin-left: 20px;
+}
+
+/* New editor button */
+.new-editor-btn {
+  background: var(--button-bg);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.new-editor-btn:hover {
+  background: var(--button-hover);
+  transform: translateY(-1px);
+}
+
+/* Modal styles */
+.modal-overlay {
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+}
+
+.modal {
+  background: var(--modal-bg);
+  border-radius: 12px;
+  padding: 25px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.modal input {
+  background: var(--editor-bg);
+  border: 1px solid var(--border-color);
+  padding: 12px;
+  border-radius: 6px;
+  color: var(--text-color);
+}
+
+.modal-buttons button {
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+/* Username prompt */
+.username-prompt {
+  background: var(--bg-color);
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.username-prompt form {
+  background: var(--modal-bg);
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  width: 100%;
+  max-width: 400px;
+}
+
+.username-prompt input {
+  background: var(--editor-bg);
+  border: 1px solid var(--border-color);
+  padding: 12px;
+  border-radius: 6px;
+  color: var(--text-color);
+  width: 100%;
+  margin: 15px 0;
+}
+
+.username-prompt button {
+  background: var(--button-bg);
+  color: white;
+  width: 100%;
+  padding: 12px;
+  border-radius: 6px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.username-prompt button:hover {
+  background: var(--button-hover);
+  transform: translateY(-1px);
+}
+
+/* Monaco editor theme adjustments */
+.monaco-editor {
+  padding: 10px 0;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-color);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--button-bg);
 }
