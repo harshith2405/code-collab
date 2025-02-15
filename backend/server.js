@@ -1,4 +1,6 @@
-require("dotenv").config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
+
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
@@ -8,10 +10,24 @@ const Room = require("./models/Room");
 
 const app = express();
 const httpServer = createServer(app);
-const io = new Server(httpServer, { cors: { origin: "*" } });
+const io = new Server(httpServer, {
+  cors: {
+    origin: "http://localhost:3000", // Replace with your frontend URL
+    methods: ["GET", "POST"],
+    credentials: true
+  },
+  pingTimeout: 60000,
+  pingInterval: 25000
+});
 
 app.use(cors());
 app.use(express.json());
+
+// Add some validation
+if (!process.env.MONGO_URI) {
+  console.error("MONGO_URI is not defined in environment variables");
+  process.exit(1);
+}
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGO_URI, {
@@ -20,64 +36,98 @@ mongoose.connect(process.env.MONGO_URI, {
 })
 .then(() => {
   console.log("MongoDB Connected Successfully");
-  console.log("Database Name:", mongoose.connection.name);
+  console.log("Database:", mongoose.connection.name);
 })
 .catch((err) => {
   console.error("MongoDB Connection Error:", err);
-  process.exit(1); // Exit the process if MongoDB connection fails
+  process.exit(1);
 });
 
-// Add this to check for disconnections
-mongoose.connection.on('error', err => {
-  console.error('MongoDB connection error:', err);
+mongoose.connection.on("error", (err) => {
+  console.error("MongoDB error:", err);
 });
 
-mongoose.connection.on('disconnected', () => {
-  console.log('MongoDB disconnected');
+mongoose.connection.on("disconnected", () => {
+  console.log("MongoDB disconnected");
 });
 
 io.on("connection", (socket) => {
-  console.log("User connected:", socket.id);
+  console.log("New client connected:", socket.id);
+  
+  socket.on("disconnect", (reason) => {
+    console.log("Client disconnected:", socket.id, "Reason:", reason);
+  });
 
-  socket.on("join-room", async (roomId) => {
+  socket.on("join-room", async ({ roomId, username }) => {
     try {
       socket.join(roomId);
-      console.log(`User ${socket.id} joined room: ${roomId}`);
+      console.log(`User ${username} (${socket.id}) joined room: ${roomId}`);
 
-      // Load previous code from database
       let room = await Room.findOne({ roomId });
-      console.log("Found room:", room); // Debug log
-
+      
       if (room) {
-        console.log("Emitting existing code for room:", roomId);
+        // Add user to room
+        room.users.push({ socketId: socket.id, username });
+        await room.save();
+        
         socket.emit("load-code", room.code);
+        socket.emit("load-messages", room.messages);
       } else {
-        console.log("Creating new room:", roomId);
-        try {
-          room = new Room({ 
-            roomId, 
-            code: "// Start coding...",
-            lastUpdated: new Date(),
-            createdAt: new Date()
-          });
-          await room.save();
-          console.log("New room created successfully");
-          socket.emit("load-code", room.code);
-        } catch (saveError) {
-          console.error("Error saving new room:", saveError);
-          throw saveError;
-        }
+        room = new Room({ 
+          roomId, 
+          code: "// Start coding...",
+          users: [{ socketId: socket.id, username }],
+          messages: []
+        });
+        await room.save();
+        socket.emit("load-code", room.code);
       }
 
-      // Notify other users that someone joined
-      socket.to(roomId).emit("user-joined", socket.id);
+      // Broadcast updated user list to all clients in the room
+      const users = room.users.map(u => ({ socketId: u.socketId, username: u.username }));
+      io.to(roomId).emit("update-users", users);
+      
+      // Notify others that a new user joined
+      socket.to(roomId).emit("user-joined", { socketId: socket.id, username });
     } catch (error) {
-      console.error("Detailed error in join-room:", {
-        error: error.message,
-        stack: error.stack,
-        roomId: roomId
-      });
+      console.error("Error in join-room:", error);
       socket.emit("error", "Failed to join room: " + error.message);
+    }
+  });
+
+  socket.on("send-message", async ({ roomId, message, username }) => {
+    try {
+      const newMessage = { username, text: message, timestamp: new Date() };
+      
+      await Room.findOneAndUpdate(
+        { roomId },
+        { $push: { messages: newMessage } }
+      );
+
+      io.to(roomId).emit("new-message", newMessage);
+    } catch (error) {
+      console.error("Error sending message:", error);
+      socket.emit("error", "Failed to send message");
+    }
+  });
+
+  socket.on("disconnect", async () => {
+    try {
+      // Find all rooms where this socket was a user
+      const rooms = await Room.find({ "users.socketId": socket.id });
+      
+      for (const room of rooms) {
+        // Remove user from room
+        room.users = room.users.filter(u => u.socketId !== socket.id);
+        await room.save();
+        
+        // Broadcast updated user list
+        const users = room.users.map(u => ({ socketId: u.socketId, username: u.username }));
+        io.to(room.roomId).emit("update-users", users);
+        io.to(room.roomId).emit("user-left", socket.id);
+      }
+    } catch (error) {
+      console.error("Error handling disconnect:", error);
     }
   });
 
@@ -100,10 +150,6 @@ io.on("connection", (socket) => {
       socket.emit("error", "Failed to save code");
     }
   });
-
-  socket.on("disconnect", () => {
-    console.log("User disconnected:", socket.id);
-  });
 });
 
 app.get("/", (req, res) => {
@@ -120,6 +166,13 @@ app.get("/api/room/:roomId", async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: "Server error" });
   }
+});
+
+app.get("/health", (req, res) => {
+  res.status(200).json({
+    status: "healthy",
+    mongodb: mongoose.connection.readyState === 1 ? "connected" : "disconnected"
+  });
 });
 
 const PORT = process.env.PORT || 5000;
