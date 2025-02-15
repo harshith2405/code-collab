@@ -16,6 +16,7 @@
     "express": "^4.21.2",
     "http": "^0.0.1-security",
     "mongoose": "^8.10.1",
+    "react-feather": "^2.0.10",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
     "uuid": "^11.0.5"

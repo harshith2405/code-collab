@@ -511,37 +511,51 @@ body {
 
 /* Share link bar */
 .share-link-bar {
-  background: var(--sidebar-bg);
-  padding: 12px 20px;
+  background: var(--bg-secondary);
+  padding: 0;
   border-radius: 8px;
-  margin: 20px 0;
+  box-shadow: var(--shadow-sm);
   display: flex;
-  align-items: center;
-  gap: 15px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  align-items: stretch;
+  margin: 1rem 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.share-link-content {
+  padding: 1rem 1.5rem;
+  flex: 1;
+}
+
+.share-link-content p {
+  margin: 0;
+  color: var(--text-primary);
 }
 
 .copy-link-btn {
-  background: var(--button-bg);
+  background: var(--success-color);
   color: white;
   border: none;
-  padding: 8px 16px;
-  border-radius: 4px;
+  padding: 0 1.5rem;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 0.5rem;
   font-weight: 500;
+  white-space: nowrap;
   transition: all 0.3s ease;
+  min-width: fit-content;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .copy-link-btn:hover {
-  background: var(--button-hover);
-  transform: translateY(-1px);
+  background: var(--success-color);
+  filter: brightness(1.1);
 }
 
 .copy-link-btn.success {
   background: var(--success-color);
+  filter: brightness(1.2);
 }
 
 /* Main content layout */

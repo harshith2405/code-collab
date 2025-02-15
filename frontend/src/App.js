@@ -284,13 +284,16 @@ function App() {
       </div>
 
       <div className="share-link-bar">
-        <p>Share this link: {window.location.origin}/{roomId}</p>
+        <div className="share-link-content">
+          <p>Share this link: {window.location.origin}/{roomId}</p>
+        </div>
         <button 
           className={`copy-link-btn ${copySuccess ? 'success' : ''}`}
           onClick={handleCopyLink}
           title="Copy link to clipboard"
         >
           {copySuccess ? <Check size={16} /> : <Copy size={16} />}
+          {copySuccess ? 'Copied!' : 'Copy'}
         </button>
       </div>
 
