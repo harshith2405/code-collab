@@ -4,6 +4,7 @@ import io from "socket.io-client";
 import { v4 as uuidv4 } from "uuid";
 import './App.css';
 
+
 // Move socket initialization inside useEffect to avoid potential issues
 function App() {
   const [code, setCode] = useState("// Start coding...");
@@ -26,14 +27,15 @@ function App() {
       window.history.pushState({}, "", `/${id}`);
     }
 
-    // Clean up socket connection on component unmount
+    // Clean up socket connection on component unmountttttt
     return () => newSocket.disconnect();
   }, []);
 
   useEffect(() => {
     if (!socket) return;
 
-    // Join room and set up event listeners after socket is initialized
+    // Join room and set up event listeners after socket is initializeddd
+
     socket.emit("join-room", roomId);
 
     socket.on("connect", () => {
